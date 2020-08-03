@@ -1,31 +1,21 @@
 import PIL.Image as Image 
-import os 
 import numpy as np
 import torch
 from torchvision import transforms
-from tqdm import tqdm
-import argparse
 import warnings
 import torch.nn.functional as F
+from model.resnet50 import resnet50
    
-import torchvision.models as models
-import pickle 
-
-import pandas as pd
-import sys 
+import sys
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
 sys.path.append('../utils/')
-import outil
-
-from scipy.misc import imresize
-from scipy import signal
-## resize image according to the minsize, at the same time resize the x,y coordinate
+import utils.outil as outil
 
 
 class CoarseAlign:
-    def __init__(self, nbScale, nbIter, tolerance, transform, minSize, segId = 1, segFg = True, imageNet = True, scaleR = 2):
+    def __init__(self, nbScale, nbIter, tolerance, transform, minSize, segId = 1, segFg = True, imageNet = False, scaleR = 2):
         
         ## nb iteration, tolerance, transform
         self.nbIter = nbIter
@@ -33,17 +23,14 @@ class CoarseAlign:
         
         ## resnet 50 
         resnet_feature_layers = ['conv1','bn1','relu','maxpool','layer1','layer2','layer3']
-        if imageNet : 
-            resNetfeat = models.resnet50(pretrained=True)          
-        else : 
-            
-            resNetfeat = resnet50()
-            featPth = '../../model/pretrained/resnet50_moco.pth'
-            param = torch.load(featPth)
-            state_dict = {k.replace("module.", ""): v for k, v in param['model'].items()}
-            msg = 'Loading pretrained model from {}'.format(featPth)
-            print (msg)
-            resNetfeat.load_state_dict( state_dict )
+
+        resNetfeat = resnet50()
+        featPth = 'model/pretrained/resnet50_moco.pth'
+        param = torch.load(featPth)
+        state_dict = {k.replace("module.", ""): v for k, v in param['model'].items()}
+        msg = 'Loading pretrained model from {}'.format(featPth)
+        print (msg)
+        resNetfeat.load_state_dict( state_dict )
             
         resnet_module_list = [getattr(resNetfeat,l) for l in resnet_feature_layers]
         last_layer_idx = resnet_feature_layers.index('layer3')
